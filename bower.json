@@ -1,0 +1,22 @@
+{
+  "name": "james",
+  "description": "",
+  "main": "",
+  "moduleType": [],
+  "authors": [
+    "enhuizhu"
+  ],
+  "license": "MIT",
+  "homepage": "http://www.olmarket.co.uk",
+  "ignore": [
+    "**/.*",
+    "node_modules",
+    "bower_components",
+    "test",
+    "tests"
+  ],
+  "dependencies": {
+    "d3": "~3.5.17",
+    "underscore": "~1.8.3"
+  }
+}

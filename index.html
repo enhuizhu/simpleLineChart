@@ -1,0 +1,38 @@
+
+<!DOCTYPE html>
+<html>
+<meta charset="utf-8">
+<link type="text/css" rel="stylesheet" href="chart.css"/>
+<script src="bower_components/d3/d3.min.js"></script>
+<script src="bower_components/underscore/underscore-min.js"></script>
+<script src="js/lineChart.js"></script>
+<body>
+
+<table class="chart-container">
+    <tr>
+        <td id="chartContainer"></td>
+    </tr>
+    <tr>
+        <td id="chartContainer2"></td>
+    </tr>
+</table>
+
+<script>
+ var parseDate = d3.time.format("%Y-%m-%d").parse;
+ var chart1 = new lineChart({
+        selector: "#chartContainer"
+     });
+
+ d3.csv("readme-flights.csv", function(error, data) {
+     if (error) throw error;
+
+      data.forEach(function(d) {
+        d.date = parseDate(d.date);
+        d.value = +d.value;
+      });
+
+      chart1.setChartBaseOnData(data);
+ });
+
+</script>
+</html>
