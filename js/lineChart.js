@@ -18,6 +18,9 @@ var lineChart = function(options) {
 
     this.x = d3.time.scale().range([0, this.width]);
     this.y = d3.scale.linear().range([this.height, 0]);
+    this.format = d3.time.format("%Y-%m-%d");
+
+    d3.select(config.selector).attr("style", "position:relative");
 
     this.xAxis = d3.svg.axis()
 	    .scale(this.x)
@@ -42,6 +45,18 @@ var lineChart = function(options) {
 	    .x(function(d) { return that.x(d.date); })
 	    .y(function(d) { return that.y(d.value); });
 
+	this.toolTip = d3.select(config.selector) 	    
+		.append("div")
+	    .attr("class","svg-tooltip hide");
+
+	this.toolTip
+		.append("div")
+		.attr("class", "title");
+
+	this.toolTip
+		.append("div")
+		.attr("class", "content")
+
 	this.svg = d3.select(config.selector)
 	    .append("svg")
 	    .attr("width", this.width + config.margin.left + config.margin.right)
@@ -58,8 +73,90 @@ lineChart.prototype = {
 		this.setClipPath();
 		this.setUpDom();
 		this.setZoom();
+		this.setUpEvents();
 	},
     
+	setUpEvents: function() {
+		var that = this;
+
+		this.pane = this.svg.select(".pane")[0][0];
+		
+		this.svg
+		.on("mousemove", function() {
+ 			var mouse = d3.mouse(that.pane),
+            exactDate = that.x.invert(mouse[0]);
+			
+			var closeData = that.getClosestDate(that.data, exactDate, true);
+			var y = that.y(closeData.value);
+
+			if (closeData) {
+				that.toolTip.attr("style", "left:" + mouse[0] + "px;" + "top:" + y + "px;");
+				that.toolTip.select(".title").html(that.format(closeData.date));
+				that.toolTip.select(".content").html(closeData.value);
+			}else{
+				that.hideTooltip();
+			}
+		})
+		.on("mouseover", function() {
+			that.showToolTip();
+		})
+		.on("mouseout", function() {
+			that.hideTooltip();
+		});
+	},
+
+	showToolTip: function() {
+		this.toolTip.classed("hide", false);
+	},
+
+	hideTooltip: function() {
+		this.toolTip.classed("hide", true);
+	},
+
+	getClosestDate: function(data, needle, needSort) {
+		if (needSort) {
+			var sortedData = _.sortBy(data, function(v) {
+				return + v.date
+			})
+		}else{
+			var sortedData = data;
+		}
+
+		var dataLength = sortedData.length;
+
+		if (dataLength === 1) {
+			return sortedData[0];
+		}
+
+		if (dataLength === 2) {
+			return Math.abs(sortedData[0].date - needle) < Math.abs(sortedData[1].date - needle) ?
+				sortedData[0] : sortedData[1];
+		}
+
+		var timeStamp = + needle,
+			min = + sortedData[0].date,
+			max = + sortedData[dataLength - 1].date;
+
+		// console.info(timeStamp, min, max);
+		if (timeStamp < min || timeStamp > max) {
+			return false;
+		}else{
+			/**
+			* should the get the elment in the middle
+			**/
+			var middle = Math.floor(dataLength/2)
+
+			if (+sortedData[middle].date < timeStamp) {
+				return this.getClosestDate(sortedData.slice(middle), needle)
+			}else if (+sortedData[middle].date == timeStamp) {
+				return sortedData[middle];
+			}else{
+				return this.getClosestDate(sortedData.slice(0, middle + 1), needle);
+			}
+
+		}
+	},
+
     setGradiant: function() {
     	var gradient = this.svg.append("defs").append("linearGradient")
 		    .attr("id", "gradient")
@@ -133,6 +230,7 @@ lineChart.prototype = {
 		var min = d3.min(data, function(d) {return d.date}),
 			max = d3.max(data, function(d) {return d.date});
 		
+		this.data = data;
 		this.x.domain([min, max]);
 		this.y.domain([0, d3.max(data, function(d) { return d.value; })]);
 		this.zoom.x(this.x);

@@ -44,3 +44,17 @@ rect.pane {
   fill: none;
   pointer-events: all;
 }
+
+.hide {
+  display: none !important;
+}
+
+.svg-tooltip {
+  min-width:10px;
+  min-height:10px; 
+  position:absolute; 
+  z-index:100;
+  border:solid 1px #CAC3C3;
+  background: white;
+  padding: 10px;
+}
