@@ -20,10 +20,13 @@
 <script>
  var parseDate = d3.time.format("%Y-%m-%d").parse;
  var chart1 = new lineChart({
-        selector: "#chartContainer"
+        selector: "#chartContainer",
+        toolTip: function(toolTip, data) {
+            toolTip.content = "test";
+        }
      });
 
- d3.csv("readme-flights.csv", function(error, data) {
+ d3.csv("test.csv", function(error, data) {
      if (error) throw error;
 
       data.forEach(function(d) {

@@ -1,26 +1,27 @@
 var lineChart = function(options) {
-	var config = {
+	var that = this;
+
+	this.config = {
 		margin: {top: 20, right: 20, bottom: 30, left: 20},
 		chartWidth: 960,
 		chartHeight: 500,
+		indicatorRadius: 5
 	};
 
-	var that = this;
-
-	_.extend(config, options);
+	_.extend(this.config, options);
 	
 	parseDate = d3.time.format("%Y-%m-%d").parse,
     formatDate = d3.time.format("%Y");
 
-	this.width = config.chartWidth - config.margin.left - config.margin.right;
-    this.height = config.chartHeight - config.margin.top - config.margin.bottom;
+	this.width = this.config.chartWidth - this.config.margin.left - this.config.margin.right;
+    this.height = this.config.chartHeight - this.config.margin.top - this.config.margin.bottom;
 
 
     this.x = d3.time.scale().range([0, this.width]);
     this.y = d3.scale.linear().range([this.height, 0]);
     this.format = d3.time.format("%Y-%m-%d");
 
-    d3.select(config.selector).attr("style", "position:relative");
+    d3.select(this.config.selector).attr("style", "position:relative");
 
     this.xAxis = d3.svg.axis()
 	    .scale(this.x)
@@ -35,32 +36,23 @@ var lineChart = function(options) {
 	    .tickPadding(6);
 
 	this.area = d3.svg.area()
-	    .interpolate("step-after")
+	    // .interpolate("step-after")
 	    .x(function(d) { return that.x(d.date); })
 	    .y0(this.y(0))
 	    .y1(function(d) { return that.y(d.value); });
 
 	this.line = d3.svg.line()
-	    .interpolate("step-after")
+	    // .interpolate("step-after")
 	    .x(function(d) { return that.x(d.date); })
 	    .y(function(d) { return that.y(d.value); });
 
-	this.toolTip = d3.select(config.selector) 	    
+	this.svg = d3.select(this.config.selector)
 		.append("div")
-	    .attr("class","svg-tooltip hide");
-
-	this.toolTip
-		.append("div")
-		.attr("class", "title");
-
-	this.toolTip
-		.append("div")
-		.attr("class", "content")
-
-	this.svg = d3.select(config.selector)
+		.attr("class", "line_chart_container")
+		.attr("style", "display:inline-block; position:relative")
 	    .append("svg")
-	    .attr("width", this.width + config.margin.left + config.margin.right)
-	    .attr("height", this.height + config.margin.top + config.margin.bottom)
+	    .attr("width", this.width + this.config.margin.left + this.config.margin.right)
+	    .attr("height", this.height + this.config.margin.top + this.config.margin.bottom)
 	  	.append("g");
 
     this.init();
@@ -80,37 +72,55 @@ lineChart.prototype = {
 		var that = this;
 
 		this.pane = this.svg.select(".pane")[0][0];
+		this.hasToolTip = this.config.toolTip && _.isFunction(this.config.toolTip);
 		
-		this.svg
-		.on("mousemove", function() {
- 			var mouse = d3.mouse(that.pane),
-            exactDate = that.x.invert(mouse[0]);
-			
-			var closeData = that.getClosestDate(that.data, exactDate, true);
-			var y = that.y(closeData.value);
+		if (this.hasToolTip) {
+			this.svg
+			.on("mousemove", function() {
+	 			var mouse = d3.mouse(that.pane),
+	            exactDate = that.x.invert(mouse[0]);
+				
+				var closeData = that.getClosestDate(that.data, exactDate, true);
+				var y = that.y(closeData.value);
 
-			if (closeData) {
-				that.toolTip.attr("style", "left:" + mouse[0] + "px;" + "top:" + y + "px;");
-				that.toolTip.select(".title").html(that.format(closeData.date));
-				that.toolTip.select(".content").html(closeData.value);
-			}else{
+				if (closeData) {
+					var x = that.x(closeData.date);
+					
+					that.toolTip.attr("style", "left:" + (x + that.config.indicatorRadius + 4) + "px;" + "top:" + (y - that.config.indicatorRadius) + "px;");
+					
+					that.indicator
+						.attr("cx", x)
+						.attr("cy", y);
+
+					var toolTipObj = {
+							content:""
+						};
+
+					that.config.toolTip(toolTipObj, closeData);
+					that.toolTip.html(toolTipObj.content);
+					// that.toolTip.select(".title").html(that.format(closeData.date));
+					// that.toolTip.select(".content").html(closeData.value);
+				}else{
+					that.hideTooltip();
+				}
+			})
+			.on("mouseover", function() {
+				that.showToolTip();
+			})
+			.on("mouseout", function() {
 				that.hideTooltip();
-			}
-		})
-		.on("mouseover", function() {
-			that.showToolTip();
-		})
-		.on("mouseout", function() {
-			that.hideTooltip();
-		});
+			});
+		};
 	},
 
 	showToolTip: function() {
 		this.toolTip.classed("hide", false);
+		this.indicator.classed("hide", false);
 	},
 
 	hideTooltip: function() {
 		this.toolTip.classed("hide", true);
+		this.indicator.classed("hide", true);
 	},
 
 	getClosestDate: function(data, needle, needSort) {
@@ -186,6 +196,11 @@ lineChart.prototype = {
     },
 
     setUpDom: function() {
+		this.toolTip = d3.select(this.config.selector) 	    
+			.select(".line_chart_container")
+			.append("div")
+		    .attr("class","svg-tooltip hide");
+		
 		this.svg.append("g")
 		    .attr("class", "y axis")
 		    .attr("transform", "translate(" + this.width + ",0)");
@@ -205,6 +220,15 @@ lineChart.prototype = {
 		    .attr("align", "center")
 		    .attr("class", "line")
 		    .attr("clip-path", "url(#clip)");
+
+		this.indicator = this.svg.append("circle")
+			.attr("r", this.config.indicatorRadius)
+			.attr("stroke", "grey")
+			.attr("cx", "50")
+			.attr("cy", "100")
+			.attr("stroke-width", "1")
+			.attr("fill", "#CAC8C8")
+			.classed("hide", true);
     },
 
     setZoom: function() {
