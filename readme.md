@@ -42,7 +42,10 @@ bower install
  var parseDate = d3.time.format("%Y-%m-%d").parse;
  
  var chart1 = new lineChart({
-        selector: "#chartContainer"
+        selector: "#chartContainer",
+        toolTip: function(toolTip, data) {
+            toolTip.content = "test";
+        }
      });
 
  d3.csv("readme-flights.csv", function(error, data) {
@@ -58,7 +61,7 @@ bower install
 
 ```
 
-
+the toolTip function inside the config, can customize the tooltip in the linechart.
 
 
 
